@@ -1,0 +1,30 @@
+version: "3"
+services:
+  test-php5:
+    image: "php:5.6.40"
+    volumes: 
+      - ./src:/app/
+    command: php cli.php VASS LTPXM
+    working_dir: /app/
+
+  test-php7:
+    image: "php:7"
+    volumes: 
+      - ./src:/app/
+    command: php cli.php VASS LTPXM
+    working_dir: /app/
+    depends_on:
+      test-php5:
+        condition: service_completed_successfully
+
+  test-php8:
+    image: "php:8"
+    volumes: 
+      - ./src:/app/
+    command: php cli.php VASS LTPXM
+    working_dir: /app/
+    depends_on:
+      test-php7:
+        condition: service_completed_successfully
+
+  
