@@ -2,7 +2,6 @@
 
 require_once('scrap.php');
 
-
 if( $argc <= 1 ) {
 	exit(63);
 } else {
@@ -17,8 +16,9 @@ function render($clanSkirmishTank) {
 	$clr_gld = "\033[103;30m";
 	$clr_blu = "\033[94m";
 	$clr_rst = "\033[0m";
-	$bonobo = ['M6', 'T-34-85M', 'Cromwell B'];
-	foreach($clanSkirmishTank as $playerName => $tankData) {
+	$bonobo = array('M6', 'T-34-85M', 'Cromwell B');
+	foreach($clanSkirmishTank as $playerName => $playerData) {
+		$tankData = $playerData['tank'];
 		if( sizeof($tankData) > 0 ) {
 			$playerSkirmishCount = array_reduce($tankData, function($carry, $tank) {
 				return $carry + $tank["battles_count"]; }, 0);
