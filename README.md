@@ -25,3 +25,8 @@ php src/cli.php [TAG [TAG [TAG [...] ] ] ]
  - Trie des joueurs par date de dernière partie joué
  - Filtre temporel améliorer
  - GUI
+ - commentaire, typage, doc
+
+## Note 
+
+Ce projet utilise volontairement des "vielles technologies" et peu de librairie, afin d'être compatible au plus large, y compris avec des configurations sous Windows XP, et d'autres systèmes 32bit etc..

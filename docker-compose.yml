@@ -28,3 +28,9 @@ services:
         condition: service_completed_successfully
 
   
+  web-php7:
+    image: "php:8.2-apache"
+    ports:
+      - 8040:80
+    volumes:    
+      - ./src:/var/www/html/
