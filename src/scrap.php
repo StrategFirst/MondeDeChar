@@ -51,6 +51,53 @@ function getClanID($clanTag) {
 }
 
 /** PUBLIC API
+ * Search a player and get it's id based on it's nickname
+ *
+ * Return the id of the player with the closest match based on the given nick
+ *
+ * @param string $playerNick
+ * @return int | NULL
+ */
+function getPlayerID($playerNick) {
+	// offset and limit are set to find the first match, timeframe is mandatory, battle type is also mandatory
+	// and we choose random game as all players must have at least one of those.
+	$req = curl_init("https://worldoftanks.eu/fr/community/accounts/search/?name=$playerNick&name_gt=");
+	
+	// the following http headers are mandatory here, are the API will refuse us
+	curl_setopt($req, CURLOPT_HTTPHEADER, array(
+		'Accept: application/json; q=0.01',
+		'X-Requested-With: XMLHttpRequest'));
+
+	// capture of stdout is required for curl
+	ob_start();
+	curl_exec($req);
+	if( curl_error($req) ) {
+		$errorMessage = curl_error($req);
+		ob_end_clean();
+		curl_close($req);
+		throw new InstallationException($errorMessage);
+	}
+	if( curl_getinfo($req, CURLINFO_HTTP_CODE) != 200 ) {
+		$exitCode = curl_getinfo($req, CURLINFO_HTTP_CODE);
+		ob_end_clean();
+		curl_close($req);
+		throw new WargamingException($exitCode);
+	}
+	$res = json_decode(ob_get_contents());
+	ob_end_clean();
+	curl_close($req);
+
+	// In this API entry point there's no status, however all query's aren't sure to find an answer
+	if( sizeof($res->response) == 0 ) {
+		return NULL;
+	}
+	if( ! isset($res->response[0]->account_id) ) {
+		throw new WargamingException();
+	}
+	return intval($res->response[0]->account_id);
+}
+
+/** PUBLIC API
  * Query all player of the clan
  *
  * For a given clan id return the first 25 users informations, the content isn't managed and could evolve, for any structure dump the output
@@ -84,6 +131,7 @@ function getClanPlayers($clanId) {
 	}
 
 	$res = json_decode(ob_get_contents());
+
 	ob_end_clean();
 	curl_close($req);
 	if( $res->status != "ok" ) {
@@ -101,9 +149,10 @@ function getClanPlayers($clanId) {
  * By giving a player id, this retrieve all tanks used by the player in skirmish in Tier 6, content information may vary !
  *
  * @param int $playerId
+ * @param int $skirmishTier
  * @return array Full type : array[ int<index> => array[ string<key> => mixed<statistics> ]<tanks> ]
  */
-function getPlayerSkirmishTank($playerId) {
+function getPlayerSkirmishTank($playerId, $skirmishTier) {
 	$req = curl_init("https://worldoftanks.eu/wotup/profile/vehicles/list/");
 	curl_setopt($req, CURLOPT_CUSTOMREQUEST, 'POST');
 	curl_setopt($req, CURLOPT_POSTFIELDS, json_encode(array(
@@ -113,7 +162,7 @@ function getPlayerSkirmishTank($playerId) {
 		"premium" => array(0,1),
 		"collector_vehicle" => array(0,1),
 		"nation" => array(), "role" => array(), "type" => array(),
-		"tier" => array(6),
+		"tier" => array($skirmishTier),
 		"language" => "fr" ) ) );
 	// The following HTTP headers are mandatory otherwise the API will deny our request
 	curl_setopt($req, CURLOPT_HTTPHEADER, array(
@@ -138,6 +187,7 @@ function getPlayerSkirmishTank($playerId) {
 
 	$res = json_decode(ob_get_contents());
 	ob_end_clean();
+
 	curl_close($req);
 	if( $res->status != "ok" ) {
 		throw new WargamingException();
@@ -156,20 +206,20 @@ function getPlayerSkirmishTank($playerId) {
 	return $tankDataMapList;
 }
 
-/** PUBLIC API
+/** PUBLIC & PRIVATE API
  * Query the API for every tank of the clan in Skirmish T6
  *
  * @param string $clanTag
  * @return array Full type : array[ string<playerName> => array<tank>[ int<index> => array<information>[ string<key> => mixed<statistics> ] ] ]
  */
-function getClanSkirmishData($clanTag) {
+function getClanSkirmishData($clanTag, $skirmishTier) {
 	$clanId = getClanId($clanTag);
 	$clanPlayers = getClanPlayers($clanId);
 	$clanSkirmishTank = array_combine(
 		array_map( function($player) { return $player->name; } , $clanPlayers ),
-		array_map( function($player) { global $WARGAMING;
+		array_map( function($player) use ($skirmishTier) { global $WARGAMING;
 			return array(
-				"tank" => getPlayerSkirmishTank($player->id),
+				"tank" => getPlayerSkirmishTank($player->id, $skirmishTier),
 				"player" => array(
 					"last_battle_time" => getPlayerLastBattleTimestamp( $WARGAMING, $player->id),
 					"rank" => NULL
@@ -178,6 +228,20 @@ function getClanSkirmishData($clanTag) {
 	);
 	return $clanSkirmishTank;
 }
+
+/** PUBLIC & PRIVATE API
+ * Query the API for every tank of the clan in Skirmish T6
+ *
+ * @param string $clanTag
+ * @return array Full type : array[ string<playerName> => array<tank>[ int<index> => array<information>[ string<key> => mixed<statistics> ] ] ]
+ */
+function getPlayerSkirmishData($playerNick, $skirmishTier) {
+	$playerId = getPlayerId($playerNick);
+	$playerTank = getPlayerSkirmishTank($playerId, $skirmishTier);
+	return $playerTank;
+}
+
+
 
 /** PRIVATE API
  * Query the API for last battle time no matter game mode

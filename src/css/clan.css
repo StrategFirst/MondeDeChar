@@ -1,0 +1,39 @@
+form {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+table {
+  margin: 1rem .5rem;
+}
+
+td, th {
+  padding: 10px 25px;
+  margin: 20px;
+  
+  --tint: #ffffff60;
+  background: transparent;
+  color: var(--tint);
+}
+.char-bonobo {
+  --tint: #fc6969b0;
+}
+.char-premium {
+  --tint: gold;
+}
+.char-collection {
+  --tint: #9fff9fb0;
+}
+.char-normal {
+  --tint: #c4ffffb0;
+}
+
+td {
+  border: 3px solid ;
+  font-weight: 200;
+  font-size: 10pt;
+}
+
+i {
+  font-size: 8pt;
+  margin-left: .5rem;
+}

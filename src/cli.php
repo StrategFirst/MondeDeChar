@@ -1,5 +1,7 @@
 <?php
 
+if( php_sapi_name() != 'cli' ) exit();
+
 require_once('scrap.php');
 
 if( $argc <= 1 ) {
