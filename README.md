@@ -20,12 +20,11 @@ php src/cli.php [TAG [TAG [TAG [...] ] ] ]
 
 
 ## A venir
-
- - Support escarmouches / bastion Tier 8 & 10
- - Trie des joueurs par date de dernière partie joué
- - Filtre temporel améliorer
- - GUI
- - commentaire, typage, doc
+ - Sanitize input
+ - Sanitize output
+ - Custom list of flagged tank
+ - Parralelisation requête
+ - Optimistation vitesse utilisation API
 
 ## Note 
 
