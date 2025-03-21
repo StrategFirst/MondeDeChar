@@ -11,7 +11,9 @@ class InstallationException extends Exception {};
  * Return the id of the clan with the closest match based on the given tag
  *
  * @param string $clanTag
- * @return int | NULL
+ * @return (int | NULL)
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getClanID($clanTag) {
 	// offset and limit are set to find the first match, timeframe is mandatory, battle type is also mandatory
@@ -56,7 +58,9 @@ function getClanID($clanTag) {
  * Return the id of the player with the closest match based on the given nick
  *
  * @param string $playerNick
- * @return int | NULL
+ * @return (int | NULL)
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getPlayerID($playerNick) {
 	// offset and limit are set to find the first match, timeframe is mandatory, battle type is also mandatory
@@ -104,6 +108,8 @@ function getPlayerID($playerNick) {
  *
  * @param int $clanId
  * @return array Full type : array[ int<index> => StdClass( string<key> => mixed<informations> ) ]
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getClanPlayers($clanId) {
 	// offset, limit, order, timeframe, battle_type are all mandatory values, as for now some temporary values are put
@@ -151,6 +157,8 @@ function getClanPlayers($clanId) {
  * @param int $playerId
  * @param int $skirmishTier
  * @return array Full type : array[ int<index> => array[ string<key> => mixed<statistics> ]<tanks> ]
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getPlayerSkirmishTank($playerId, $skirmishTier) {
 	$req = curl_init("https://worldoftanks.eu/wotup/profile/vehicles/list/");
@@ -211,29 +219,34 @@ function getPlayerSkirmishTank($playerId, $skirmishTier) {
  *
  * @param string $clanTag
  * @return array Full type : array[ string<playerName> => array<tank>[ int<index> => array<information>[ string<key> => mixed<statistics> ] ] ]
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getClanSkirmishData($clanTag, $skirmishTier) {
 	$clanId = getClanId($clanTag);
 	$clanPlayers = getClanPlayers($clanId);
 	$clanSkirmishTank = array_combine(
 		array_map( function($player) { return $player->name; } , $clanPlayers ),
-		array_map( function($player) use ($skirmishTier) { global $WARGAMING;
+		array_map( function($player) use ($skirmishTier, $clanId) { global $WARGAMING;
 			return array(
 				"tank" => getPlayerSkirmishTank($player->id, $skirmishTier),
 				"player" => array(
 					"last_battle_time" => getPlayerLastBattleTimestamp( $WARGAMING, $player->id),
 					"rank" => NULL
-				)
+				),
 			); } , $clanPlayers )
 	);
+	$clanSkirmishTank['_meta_'] = array( "rank" => getClanSkirmishRating($clanId, $skirmishTier) );
 	return $clanSkirmishTank;
 }
 
 /** PUBLIC & PRIVATE API
- * Query the API for every tank of the clan in Skirmish T6
+ * Query the API for every tank of the clan in Skirmish for the given tier
  *
  * @param string $clanTag
  * @return array Full type : array[ string<playerName> => array<tank>[ int<index> => array<information>[ string<key> => mixed<statistics> ] ] ]
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getPlayerSkirmishData($playerNick, $skirmishTier) {
 	$playerId = getPlayerId($playerNick);
@@ -241,14 +254,14 @@ function getPlayerSkirmishData($playerNick, $skirmishTier) {
 	return $playerTank;
 }
 
-
-
 /** PRIVATE API
  * Query the API for last battle time no matter game mode
  *
  * @param string $application_id
  * @param string $account_id
  * @return int Unix timestamp
+ * @throws InstallationException
+ * @throws WargamingException
  */
 function getPlayerLastBattleTimestamp($application_id, $account_id) {
 	$req = curl_init("https://api.worldoftanks.eu/wot/account/info/?application_id=$application_id&fields=last_battle_time&account_id=$account_id");
@@ -309,5 +322,39 @@ function timestampToDelayString($timestamp) {
 	} else {
 		return "Il y a moins d'une minute.";
 	}
+}
+
+/** PUBLIC API
+ * Query the API for the clan rating in Skirmish for the given tier
+ * 
+ * @param int $clanId
+ * @param int $skirmishTier
+ * @return int
+ * @throws InstallationException
+ * @throws WargamingException
+ */
+function getClanSkirmishRating($clanId, $skirmishTier) {
+	$req = curl_init("https://eu.wargaming.net/clans/wot/search/api/clans/$clanId/?game=wot");
+
+	ob_start();
+	curl_exec( $req );
+	if( curl_error($req) ) {
+		$errorMessage = curl_error($req);
+		ob_end_clean();
+		curl_close($req);
+		throw new InstallationException($errorMessage);
+	}
+	if( curl_getinfo($req, CURLINFO_HTTP_CODE) != 200 ) {
+		$exitCode = curl_getinfo($req, CURLINFO_HTTP_CODE);
+		ob_end_clean();
+		curl_close($req);
+		throw new WargamingException($exitCode);
+	}
+	$res = json_decode(ob_get_contents());
+	ob_end_clean();
+	curl_close($req);
+
+	$mapTier2Idx = array(6 => 2, 8 => 1, 10 => 0);
+	return $res->clancard->elo_rating_sh[$mapTier2Idx[$skirmishTier]]->value;
 }
 ?>

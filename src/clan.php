@@ -24,11 +24,13 @@
 
 <?php
 
-function render($clanSkirmishTank) {
+function render($clanSkirmishData) {
 	$bonobo = array('M6', 'T-34-85M', 'Cromwell B');
+	echo "<h3>" . $clanSkirmishData['_meta_']['rank'] . "</h3>";
 	echo "<table>";
-	uasort($clanSkirmishTank, function($playerA, $playerB) { return $playerB['player']['last_battle_time'] - $playerA['player']['last_battle_time'];});
-	foreach($clanSkirmishTank as $playerName => $playerData) {
+	unset($clanSkirmishData['_meta_']);
+	uasort($clanSkirmishData, function($playerA, $playerB) { return $playerB['player']['last_battle_time'] - $playerA['player']['last_battle_time'];});
+	foreach($clanSkirmishData as $playerName => $playerData) {
 		$tankData = $playerData['tank'];
 		if( sizeof($tankData) > 0 ) {
 			echo "<tr>";
